@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Bảng Tuần Hoàn Hóa Học 3D</title>
+    <!-- Thư viện Tailwind CSS để style giao diện -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <style>
+        body {
+            margin: 0;
+            background-color: #000000;
+            background-image: radial-gradient(circle at center, #0B1120 0%, #000000 100%);
+            color: white;
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+            touch-action: none;
+        }
+
+        #container {
+            width: 100vw;
+            height: 100vh;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 10;
+        }
+
+        /* Styling cho từng thẻ nguyên tố */
+        .element {
+            width: 140px;
+            height: 180px;
+            box-shadow: 0px 0px 15px rgba(0, 255, 255, 0.4);
+            border: 1px solid rgba(127, 255, 255, 0.3);
+            background-color: rgba(0, 40, 60, 0.7);
+            text-align: center;
+            cursor: pointer;
+            transition: box-shadow 0.3s, border 0.3s, background-color 0.3s;
+            border-radius: 8px;
+            backdrop-filter: blur(4px);
+        }
+
+        .element:hover {
+            box-shadow: 0px 0px 25px rgba(0, 255, 255, 0.9);
+            border: 1px solid rgba(127, 255, 255, 0.9);
+            background-color: rgba(0, 80, 100, 0.8);
+            z-index: 1000;
+        }
+
+        .element .number {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 18px;
+            font-weight: bold;
+            color: rgba(127, 255, 255, 0.9);
+        }
+
+        .element .symbol {
+            position: absolute;
+            top: 40px;
+            left: 0px;
+            right: 0px;
+            font-size: 65px;
+            font-weight: 700;
+            color: #ffffff;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.6);
+        }
+
+        .element .details {
+            position: absolute;
+            bottom: 15px;
+            left: 0px;
+            right: 0px;
+            font-size: 13px;
+            color: rgba(127, 255, 255, 0.8);
+        }
+
+        .element .name {
+            font-weight: 600;
+            margin-bottom: 2px;
+            color: #a5f3fc;
+        }
+        
+        /* Menu điều khiển */
+        #menu {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 20;
+            display: flex;
+            gap: 15px;
+            background: rgba(15, 23, 42, 0.7);
+            padding: 10px 20px;
+            border-radius: 999px;
+            border: 1px solid rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        /* Khung chứa mã QR */
+        #qr-container {
+            position: absolute;
+            bottom: 30px;
+            right: 30px;
+            z-index: 20;
+            background: rgba(15, 23, 42, 0.7);
+            padding: 10px;
+            border-radius: 12px;
+            border: 1px solid rgba(127, 255, 255, 0.3);
+            backdrop-filter: blur(10px);
+            text-align: center;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.2);
+            transition: transform 0.3s, box-shadow 0.3s;
+            cursor: pointer;
+        }
+
+        #qr-container:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 25px rgba(0, 255, 255, 0.6);
+            border: 1px solid rgba(127, 255, 255, 0.8);
+        }
+
+        #qr-container img {
+            width: 80px;
+            height: 80px;
+            border-radius: 6px;
+            margin-bottom: 6px;
+            background-color: white; /* Nền trắng giúp mã QR dễ quét hơn */
+            padding: 2px;
+        }
+
+        #qr-container span {
+            font-size: 11px;
+            font-weight: 500;
+            color: #a5f3fc;
+            display: block;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        #element-modal {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(8px);
+            z-index: 9999;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+            touch-action: auto; /* Cho phép cuộn trên mobile */
+        }
+        #element-modal.active {
+            opacity: 1; pointer-events: auto;
+        }
+        .modal-content {
+            background: rgba(15, 23, 42, 0.85);
+            border: 1px solid rgba(0, 255, 255, 0.5);
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.3);
+            border-radius: 16px;
+            padding: 30px;
+            width: 90%;
+            max-width: 550px;
+            position: relative;
+            transform: translateY(30px) scale(0.95);
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            max-height: 85vh;
+            overflow-y: auto;
+        }
+        #element-modal.active .modal-content {
+            transform: translateY(0) scale(1);
+        }
+        #close-modal {
+            position: absolute;
+            top: 15px;
+            right: 20px;
+            font-size: 32px;
+            color: #a5f3fc;
+            background: none;
+            border: none;
+            cursor: pointer;
+            line-height: 1;
+            transition: all 0.3s;
+        }
+        #close-modal:hover {
+            color: #fff;
+            text-shadow: 0 0 10px #0ff;
+            transform: scale(1.1);
+        }
+    </style>
+</head>
+<body>
+
+    <div id="container"></div>
+
+    <div id="menu">
+        <button id="table" class="px-5 py-2 bg-cyan-900 hover:bg-cyan-700 text-cyan-100 rounded-full font-medium transition-colors shadow-[0_0_10px_rgba(6,182,212,0.5)]">Bảng</button>
+        <button id="sphere" class="px-5 py-2 bg-transparent hover:bg-cyan-800 text-cyan-200 rounded-full font-medium transition-colors border border-cyan-800 hover:border-cyan-500">Hình Cầu</button>
+        <button id="helix" class="px-5 py-2 bg-transparent hover:bg-cyan-800 text-cyan-200 rounded-full font-medium transition-colors border border-cyan-800 hover:border-cyan-500">Xoắn Ốc</button>
+        <button id="grid" class="px-5 py-2 bg-transparent hover:bg-cyan-800 text-cyan-200 rounded-full font-medium transition-colors border border-cyan-800 hover:border-cyan-500">Lưới</button>
+    </div>
+
+    <!-- Tiêu đề nổi -->
+    <div class="absolute top-6 left-6 z-20 pointer-events-none">
+        <h1 class="text-3xl font-bold text-white tracking-wider drop-shadow-[0_0_10px_rgba(0,255,255,0.8)]">BẢNG TUẦN HOÀN 3D</h1>
+        <p class="text-cyan-300 mt-1 opacity-80 text-sm">Sử dụng chuột để xoay và cuộn để thu/phóng</p>
+    </div>
+
+    <!-- Khung QR Code sử dụng link cố định -->
+    <div id="qr-container" title="Quét để xem thông tin chi tiết trên Wikipedia">
+        <img id="qr-code-img" src="" alt="Mã QR Website">
+        <span>Chi tiết</span>
+    </div>
+
+    <div id="element-modal">
+        <div class="modal-content">
+            <button id="close-modal" aria-label="Đóng">&times;</button>
+            <div id="modal-body">
+                <!-- Nội dung được sinh tự động bằng JS -->
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/18.6.4/tween.umd.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/renderers/CSS3DRenderer.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/TrackballControls.js"></script>
+
+    <script>
+        const tableData = [
+            "H", "Hydro", "1.008", 1, 1, "He", "Heli", "4.0026", 18, 1,
+            "Li", "Liti", "6.94", 1, 2, "Be", "Beri", "9.0122", 2, 2, "B", "Bo", "10.81", 13, 2,
+            "C", "Cacbon", "12.011", 14, 2, "N", "Nitơ", "14.007", 15, 2, "O", "Oxy", "15.999", 16, 2,
+            "F", "Flo", "18.998", 17, 2, "Ne", "Neon", "20.180", 18, 2, "Na", "Natri", "22.990", 1, 3,
+            "Mg", "Magiê", "24.305", 2, 3, "Al", "Nhôm", "26.982", 13, 3, "Si", "Silic", "28.085", 14, 3,
+            "P", "Photpho", "30.974", 15, 3, "S", "Lưu huỳnh", "32.06", 16, 3, "Cl", "Clo", "35.45", 17, 3,
+            "Ar", "Argon", "39.95", 18, 3, "K", "Kali", "39.098", 1, 4, "Ca", "Canxi", "40.078", 2, 4,
+            "Sc", "Scandi", "44.956", 3, 4, "Ti", "Titan", "47.867", 4, 4, "V", "Vanadi", "50.942", 5, 4,
+            "Cr", "Crom", "51.996", 6, 4, "Mn", "Mangan", "54.938", 7, 4, "Fe", "Sắt", "55.845", 8, 4,
+            "Co", "Coban", "58.933", 9, 4, "Ni", "Niken", "58.693", 10, 4, "Cu", "Đồng", "63.546", 11, 4,
+            "Zn", "Kẽm", "65.38", 12, 4, "Ga", "Gali", "69.723", 13, 4, "Ge", "Gecmani", "72.630", 14, 4,
+            "As", "Asen", "74.922", 15, 4, "Se", "Selen", "78.971", 16, 4, "Br", "Brom", "79.904", 17, 4,
+            "Kr", "Krypton", "83.798", 18, 4, "Rb", "Rubiđi", "85.468", 1, 5, "Sr", "Stronti", "87.62", 2, 5,
+            "Y", "Ytri", "88.906", 3, 5, "Zr", "Zirconi", "91.224", 4, 5, "Nb", "Niobi", "92.906", 5, 5,
+            "Mo", "Molypđen", "95.95", 6, 5, "Tc", "Tecnexi", "(98)", 7, 5, "Ru", "Ruteni", "101.07", 8, 5,
+            "Rh", "Rođi", "102.91", 9, 5, "Pd", "Paladi", "106.42", 10, 5, "Ag", "Bạc", "107.87", 11, 5,
+            "Cd", "Cadimi", "112.41", 12, 5, "In", "Inđi", "114.82", 13, 5, "Sn", "Thiếc", "118.71", 14, 5,
+            "Sb", "Antimon", "121.76", 15, 5, "Te", "Telu", "127.60", 16, 5, "I", "Iốt", "126.90", 17, 5,
+            "Xe", "Xenon", "131.29", 18, 5, "Cs", "Xesi", "132.91", 1, 6, "Ba", "Bari", "137.33", 2, 6,
+            "La", "Lantan", "138.91", 4, 9, "Ce", "Xeri", "140.12", 5, 9, "Pr", "Prazeođim", "140.91", 6, 9,
+            "Nd", "Neođim", "144.24", 7, 9, "Pm", "Prometi", "(145)", 8, 9, "Sm", "Samari", "150.36", 9, 9,
+            "Eu", "Europi", "151.96", 10, 9, "Gd", "Gađolini", "157.25", 11, 9, "Tb", "Tecbi", "158.93", 12, 9,
+            "Dy", "Điprozi", "162.50", 13, 9, "Ho", "Homi", "164.93", 14, 9, "Er", "Eribi", "167.26", 15, 9,
+            "Tm", "Tuli", "168.93", 16, 9, "Yb", "Ytecbi", "173.05", 17, 9, "Lu", "Lutexi", "174.97", 18, 9,
+            "Hf", "Hafni", "178.49", 4, 6, "Ta", "Tantan", "180.95", 5, 6, "W", "Vonfram", "183.84", 6, 6,
+            "Re", "Reni", "186.21", 7, 6, "Os", "Osmi", "190.23", 8, 6, "Ir", "Iriđi", "192.22", 9, 6,
+            "Pt", "Bạch kim", "195.08", 10, 6, "Au", "Vàng", "196.97", 11, 6, "Hg", "Thủy ngân", "200.59", 12, 6,
+            "Tl", "Tali", "204.38", 13, 6, "Pb", "Chì", "207.2", 14, 6, "Bi", "Bitmut", "208.98", 15, 6,
+            "Po", "Poloni", "(209)", 16, 6, "At", "Astatin", "(210)", 17, 6, "Rn", "Radon", "(222)", 18, 6,
+            "Fr", "Franxi", "(223)", 1, 7, "Ra", "Rađi", "(226)", 2, 7, "Ac", "Actini", "(227)", 4, 10,
+            "Th", "Tori", "232.04", 5, 10, "Pa", "Protactini", "231.04", 6, 10, "U", "Urani", "238.03", 7, 10,
+            "Np", "Neptuni", "(237)", 8, 10, "Pu", "Plutoni", "(244)", 9, 10, "Am", "Amerixi", "(243)", 10, 10,
+            "Cm", "Curi", "(247)", 11, 10, "Bk", "Berkeli", "(247)", 12, 10, "Cf", "Californi", "(251)", 13, 10,
+            "Es", "Einsteini", "(252)", 14, 10, "Fm", "Fecmi", "(257)", 15, 10, "Md", "Mendelevi", "(258)", 16, 10,
+            "No", "Nobeli", "(259)", 17, 10, "Lr", "Lorenxi", "(262)", 18, 10, "Rf", "Rutherfodi", "(267)", 4, 7,
+            "Db", "Đubni", "(268)", 5, 7, "Sg", "Seaborgi", "(271)", 6, 7, "Bh", "Bori", "(272)", 7, 7,
+            "Hs", "Hasi", "(270)", 8, 7, "Mt", "Meitneri", "(276)", 9, 7, "Ds", "Darmstadti", "(281)", 10, 7,
+            "Rg", "Roentgeni", "(280)", 11, 7, "Cn", "Copernixi", "(285)", 12, 7, "Nh", "Nihoni", "(284)", 13, 7,
+            "Fl", "Flerovi", "(289)", 14, 7, "Mc", "Moscovi", "(288)", 15, 7, "Lv", "Livermori", "(293)", 16, 7,
+        "Ts", "Tennessine", "(294)", 17, 7, "Og", "Oganesson", "(294)", 18, 7
+    ];
+
+    const elementDetailsData = {
+        "H": { electron: "1", config: "1s¹", physical: "Khí không màu, không mùi, nhẹ nhất trong các nguyên tố.", chemical: "Có tính khử mạnh, phản ứng với oxy tạo nước và giải phóng nhiều nhiệt lượng." },
+        "He": { electron: "2", config: "1s²", physical: "Khí trơ, không màu, không mùi, không cháy, rất nhẹ.", chemical: "Hoàn toàn trơ về mặt hóa học, hầu như không tạo thành hợp chất nào." },
+        "Li": { electron: "3", config: "[He] 2s¹", physical: "Kim loại kiềm mềm, màu trắng bạc, là kim loại nhẹ nhất.", chemical: "Tính khử mạnh, phản ứng mãnh liệt với nước tạo khí Hydro." },
+        "Be": { electron: "4", config: "[He] 2s²", physical: "Kim loại màu xám thép, cứng, nhẹ và giòn, có vị ngọt nhưng rất độc.", chemical: "Có tính lưỡng tính, phản ứng với cả axit và bazơ mạnh (tương tự Nhôm)." },
+        "B": { electron: "5", config: "[He] 2s² 2p¹", physical: "Á kim đen cứng hoặc ở dạng bột màu nâu đen.", chemical: "Khá trơ ở nhiệt độ thường, tạo các hợp chất cộng hóa trị vững chắc." },
+        "C": { electron: "6", config: "[He] 2s² 2p²", physical: "Tồn tại nhiều thù hình: Kim cương (cực cứng), Than chì (mềm, dẫn điện).", chemical: "Là cơ sở của hóa học hữu cơ, tạo vô số hợp chất phức tạp với tính chất đa dạng." },
+        "N": { electron: "7", config: "[He] 2s² 2p³", physical: "Khí không màu, không mùi, chiếm 78% bầu khí quyển Trái Đất.", chemical: "Khá trơ ở nhiệt độ thường do liên kết ba N≡N rất bền vững, ở nhiệt độ cao có tính oxy hóa." },
+        "O": { electron: "8", config: "[He] 2s² 2p⁴", physical: "Khí không màu, không mùi, cần thiết để duy trì sự sống và sự cháy.", chemical: "Chất oxy hóa mạnh, phản ứng trực tiếp với hầu hết các nguyên tố trừ nhóm halogen và khí hiếm." },
+        "F": { electron: "9", config: "[He] 2s² 2p⁵", physical: "Khí màu vàng lục nhạt, có mùi hắc và rất độc.", chemical: "Phi kim hoạt động mạnh nhất, chất oxy hóa cực mạnh, phản ứng với hầu hết các chất ngay ở nhiệt độ thường." },
+        "Ne": { electron: "10", config: "[He] 2s² 2p⁶", physical: "Khí trơ, không màu, phát sáng đỏ cam rực rỡ trong ống chân không.", chemical: "Cực kỳ trơ về mặt hóa học, chưa có hợp chất ổn định nào của Neon được biết đến." },
+        "Na": { electron: "11", config: "[Ne] 3s¹", physical: "Kim loại kiềm rất mềm, màu trắng bạc, dễ dàng cắt bằng dao.", chemical: "Rất hoạt động, cháy trong khí oxy và nổ khi tiếp xúc với nước sinh ra kiềm." },
+        "Mg": { electron: "12", config: "[Ne] 3s²", physical: "Kim loại kiềm thổ, màu trắng bạc, nhẹ nhưng cứng hơn Natri.", chemical: "Dễ cháy trong không khí phát ra ánh sáng trắng chói lòa, là chất khử mạnh." },
+        "Al": { electron: "13", config: "[Ne] 3s² 3p¹", physical: "Kim loại màu trắng bạc, rất nhẹ, dẫn điện và nhiệt tốt.", chemical: "Có tính khử mạnh và tính lưỡng tính (tác dụng với cả dung dịch axit và kiềm)." },
+        "Si": { electron: "14", config: "[Ne] 3s² 3p²", physical: "Chất bán dẫn, tinh thể màu xám sẫm có ánh kim, cứng và giòn.", chemical: "Khá trơ ở nhiệt độ thường, phản ứng mạnh với Halogen và kiềm mạnh khi đun nóng." },
+        "P": { electron: "15", config: "[Ne] 3s² 3p³", physical: "Nhiều thù hình: P trắng (cực độc, tự cháy), P đỏ (an toàn hơn, dạng bột).", chemical: "P trắng rất hoạt động (tự bốc cháy ở 40°C), P đỏ kém hoạt động hơn nhiều." },
+        "S": { electron: "16", config: "[Ne] 3s² 3p⁴", physical: "Chất rắn màu vàng, giòn, không tan trong nước, dẫn nhiệt/điện kém.", chemical: "Vừa có tính oxy hóa (khi tác dụng với kim loại) vừa có tính khử (khi tác dụng với oxy)." },
+        "Cl": { electron: "17", config: "[Ne] 3s² 3p⁵", physical: "Khí màu vàng lục, mùi hắc, nặng hơn không khí 2.5 lần và rất độc.", chemical: "Chất oxy hóa mạnh, dùng nhiều trong sát trùng nước và tẩy trắng." },
+        "Ar": { electron: "18", config: "[Ne] 3s² 3p⁶", physical: "Khí trơ không màu, không mùi, nặng hơn không khí.", chemical: "Trơ về mặt hóa học, thường dùng làm khí bảo vệ trong hàn kim loại." },
+        "K": { electron: "19", config: "[Ar] 4s¹", physical: "Kim loại kiềm mềm, màu trắng bạc, nhẹ hơn nước, nóng chảy ở nhiệt độ thấp.", chemical: "Rất hoạt động (mạnh hơn Na), phản ứng bốc cháy mãnh liệt khi chạm vào nước." },
+        "Ca": { electron: "20", config: "[Ar] 4s²", physical: "Kim loại kiềm thổ, màu xám bạc, cứng hơn kim loại kiềm.", chemical: "Phản ứng với nước ở nhiệt độ thường giải phóng Hydro (nhưng chậm hơn Kali, Natri)." }
+    };
+
+    let camera, scene, renderer;
+        let controls;
+        
+        const objects = [];
+        const targets = { table: [], sphere: [], helix: [], grid: [] };
+
+        init();
+        animate();
+        generateQRCode();
+
+        // Cập nhật hàm tạo mã QR với URL cố định (Wikipedia)
+        function generateQRCode() {
+            // Sử dụng URL cố định hợp lệ (Ví dụ: Wikipedia tiếng Việt về Bảng tuần hoàn)
+            const fixedUrl = "https://vi.wikipedia.org/wiki/B%E1%BA%A3ng_tu%E1%BA%A7n_ho%C3%A0n";
+            
+            // Gọi API qrserver để tạo mã QR từ URL cố định
+            const qrApiUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(fixedUrl)}&margin=1`;
+            
+            // Gán ảnh QR vào thẻ img
+            document.getElementById('qr-code-img').src = qrApiUrl;
+        }
+
+        // Mở link trong tab mới khi click vào mã QR
+        document.getElementById('qr-container').addEventListener('click', () => {
+            window.open("https://vi.wikipedia.org/wiki/B%E1%BA%A3ng_tu%E1%BA%A7n_ho%C3%A0n", "_blank");
+        });
+
+        function init() {
+            camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 1, 10000);
+            camera.position.z = 3000;
+
+            scene = new THREE.Scene();
+
+            for (let i = 0; i < tableData.length; i += 5) {
+                // Tạo element DOM
+                const element = document.createElement('div');
+                element.className = 'element';
+                element.style.backgroundColor = `rgba(0, ${Math.random() * 80 + 40}, ${Math.random() * 80 + 100}, 0.7)`;
+
+                const number = document.createElement('div');
+                number.className = 'number';
+                number.textContent = (i / 5) + 1;
+                element.appendChild(number);
+
+                const symbol = document.createElement('div');
+                symbol.className = 'symbol';
+                symbol.textContent = tableData[i];
+                element.appendChild(symbol);
+
+                const details = document.createElement('div');
+            details.className = 'details';
+            details.innerHTML = `<div class="name">${tableData[i + 1]}</div>${tableData[i + 2]}`;
+            element.appendChild(details);
+
+            element.addEventListener('dblclick', () => {
+                openElementModal({
+                    symbol: tableData[i],
+                    name: tableData[i + 1],
+                    mass: tableData[i + 2],
+                    number: (i / 5) + 1
+                });
+            });
+
+            // Hỗ trợ chạm trên thiết bị di động
+            let tapTimeout;
+            element.addEventListener('touchend', (e) => {
+                if (tapTimeout) {
+                    clearTimeout(tapTimeout);
+                    tapTimeout = null;
+                    openElementModal({
+                        symbol: tableData[i], name: tableData[i + 1], mass: tableData[i + 2], number: (i / 5) + 1
+                    });
+                } else {
+                    tapTimeout = setTimeout(() => { tapTimeout = null; }, 300);
+                }
+            });
+
+            const objectCSS = new THREE.CSS3DObject(element);
+            objectCSS.position.x = Math.random() * 4000 - 2000;
+                objectCSS.position.y = Math.random() * 4000 - 2000;
+                objectCSS.position.z = Math.random() * 4000 - 2000;
+                scene.add(objectCSS);
+                objects.push(objectCSS);
+
+                // 1. Tính toán tọa độ dạng Bảng (Table)
+                const objectTable = new THREE.Object3D();
+                objectTable.position.x = (tableData[i + 3] * 160) - 1530;
+                objectTable.position.y = -(tableData[i + 4] * 200) + 990;
+                targets.table.push(objectTable);
+            }
+
+            const vector = new THREE.Vector3();
+            // 2. Tính toán dạng Hình Cầu (Sphere)
+            for (let i = 0, l = objects.length; i < l; i++) {
+                const phi = Math.acos(-1 + (2 * i) / l);
+                const theta = Math.sqrt(l * Math.PI) * phi;
+                
+                const objectSphere = new THREE.Object3D();
+                objectSphere.position.setFromSphericalCoords(800, phi, theta);
+                
+                vector.copy(objectSphere.position).multiplyScalar(2);
+                objectSphere.lookAt(vector);
+                targets.sphere.push(objectSphere);
+            }
+
+            // 3. Tính toán dạng Xoắn Ốc (Helix)
+            const cylindrical = new THREE.Cylindrical();
+            for (let i = 0, l = objects.length; i < l; i++) {
+                const theta = i * 0.175 + Math.PI;
+                const y = -(i * 8) + 450;
+                
+                const objectHelix = new THREE.Object3D();
+                cylindrical.set(900, theta, y);
+                objectHelix.position.setFromCylindrical(cylindrical);
+                
+                vector.x = objectHelix.position.x * 2;
+                vector.y = objectHelix.position.y;
+                vector.z = objectHelix.position.z * 2;
+                objectHelix.lookAt(vector);
+                targets.helix.push(objectHelix);
+            }
+
+            // 4. Tính toán dạng Lưới (Grid)
+            for (let i = 0; i < objects.length; i++) {
+                const objectGrid = new THREE.Object3D();
+                objectGrid.position.x = ((i % 5) * 400) - 800;
+                objectGrid.position.y = (-(Math.floor(i / 5) % 5) * 400) + 800;
+                objectGrid.position.z = (Math.floor(i / 25)) * 1000 - 2000;
+                targets.grid.push(objectGrid);
+            }
+
+            renderer = new THREE.CSS3DRenderer();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.getElementById('container').appendChild(renderer.domElement);
+
+            controls = new THREE.TrackballControls(camera, renderer.domElement);
+            controls.minDistance = 500;
+            controls.maxDistance = 6000;
+            controls.addEventListener('change', render);
+
+            // Xử lý sự kiện các nút Menu
+            const buttonTable = document.getElementById('table');
+            const buttonSphere = document.getElementById('sphere');
+            const buttonHelix = document.getElementById('helix');
+            const buttonGrid = document.getElementById('grid');
+
+            const allButtons = [buttonTable, buttonSphere, buttonHelix, buttonGrid];
+            
+            function setActiveButton(activeBtn) {
+            allButtons.forEach(btn => {
+                btn.classList.remove('bg-cyan-900', 'shadow-[0_0_10px_rgba(6,182,212,0.5)]');
+                btn.classList.add('bg-transparent');
+            });
+            activeBtn.classList.remove('bg-transparent');
+            activeBtn.classList.add('bg-cyan-900', 'shadow-[0_0_10px_rgba(6,182,212,0.5)]');
+        }
+
+        function openElementModal(data) {
+            const modal = document.getElementById('element-modal');
+            const modalBody = document.getElementById('modal-body');
+            
+            // Tìm dữ liệu chi tiết, nếu không có hiển thị thông báo mặc định
+            const detail = elementDetailsData[data.symbol] || {
+                electron: data.number,
+                config: "Đang cập nhật...",
+                physical: "Thông tin chi tiết về tính chất vật lý đang được cập nhật thêm.",
+                chemical: "Thông tin chi tiết về tính chất hóa học đang được cập nhật thêm."
+            };
+
+            modalBody.innerHTML = `
+                <div class="text-center mb-4">
+                    <div class="text-6xl font-bold text-white drop-shadow-[0_0_15px_rgba(0,255,255,0.8)] mb-1">${data.symbol}</div>
+                    <h2 class="text-2xl font-semibold text-cyan-300 border-b border-cyan-800/80 pb-2">${data.name}</h2>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4 text-sm mb-5">
+                    <div class="bg-slate-800/60 p-3 rounded-lg border border-cyan-900/50 shadow-inner">
+                        <span class="text-cyan-600 font-semibold block mb-1">Số hiệu (Z)</span>
+                        <span class="text-white text-lg font-bold">${data.number}</span>
+                    </div>
+                    <div class="bg-slate-800/60 p-3 rounded-lg border border-cyan-900/50 shadow-inner">
+                        <span class="text-cyan-600 font-semibold block mb-1">Nguyên tử khối</span>
+                        <span class="text-white text-lg font-bold">${data.mass}</span>
+                    </div>
+                    <div class="bg-slate-800/60 p-3 rounded-lg border border-cyan-900/50 shadow-inner">
+                        <span class="text-cyan-600 font-semibold block mb-1">Số Electron</span>
+                        <span class="text-white text-lg font-bold">${detail.electron}</span>
+                    </div>
+                    <div class="bg-slate-800/60 p-3 rounded-lg border border-cyan-900/50 shadow-inner">
+                        <span class="text-cyan-600 font-semibold block mb-1">Cấu hình e</span>
+                        <span class="text-yellow-300 text-lg font-mono">${detail.config}</span>
+                    </div>
+                </div>
+
+                <div class="space-y-4 text-sm text-left">
+                    <div class="bg-slate-800/60 p-4 rounded-lg border border-cyan-900/50">
+                        <span class="text-cyan-400 font-semibold block mb-2 flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-cyan-400 inline-block"></span> Tính chất vật lý
+                        </span>
+                        <p class="text-slate-200 leading-relaxed">${detail.physical}</p>
+                    </div>
+                    <div class="bg-slate-800/60 p-4 rounded-lg border border-cyan-900/50">
+                        <span class="text-pink-400 font-semibold block mb-2 flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-pink-400 inline-block"></span> Tính chất hóa học
+                        </span>
+                        <p class="text-slate-200 leading-relaxed">${detail.chemical}</p>
+                    </div>
+                </div>
+            `;
+            
+            modal.classList.add('active');
+        }
+
+        // Đóng Modal khi bấm nút X
+        document.getElementById('close-modal').addEventListener('click', () => {
+            document.getElementById('element-modal').classList.remove('active');
+        });
+
+        // Đóng Modal khi bấm ra ngoài vùng tối
+        document.getElementById('element-modal').addEventListener('click', (e) => {
+            if (e.target.id === 'element-modal') {
+                document.getElementById('element-modal').classList.remove('active');
+            }
+        });
+
+        buttonTable.addEventListener('click', function () {
+                transform(targets.table, 2000);
+                setActiveButton(this);
+            });
+
+            buttonSphere.addEventListener('click', function () {
+                transform(targets.sphere, 2000);
+                setActiveButton(this);
+            });
+
+            buttonHelix.addEventListener('click', function () {
+                transform(targets.helix, 2000);
+                setActiveButton(this);
+            });
+
+            buttonGrid.addEventListener('click', function () {
+                transform(targets.grid, 2000);
+                setActiveButton(this);
+            });
+
+            // Chuyển sang Dạng Bảng làm mặc định lúc ban đầu
+            transform(targets.table, 2000);
+
+            window.addEventListener('resize', onWindowResize);
+        }
+
+        function transform(targets, duration) {
+            TWEEN.removeAll();
+            
+            for (let i = 0; i < objects.length; i++) {
+                const object = objects[i];
+                const target = targets[i];
+                
+                new TWEEN.Tween(object.position)
+                    .to({ x: target.position.x, y: target.position.y, z: target.position.z }, Math.random() * duration + duration)
+                    .easing(TWEEN.Easing.Exponential.InOut)
+                    .start();
+                    
+                new TWEEN.Tween(object.rotation)
+                    .to({ x: target.rotation.x, y: target.rotation.y, z: target.rotation.z }, Math.random() * duration + duration)
+                    .easing(TWEEN.Easing.Exponential.InOut)
+                    .start();
+            }
+            
+            new TWEEN.Tween(this)
+                .to({}, duration * 2)
+                .onUpdate(render)
+                .start();
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            render();
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            TWEEN.update();
+            controls.update();
+        }
+
+        function render() {
+            renderer.render(scene, camera);
+        }
+    </script>
+</body>
+</html>
